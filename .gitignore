@@ -1,0 +1,59 @@
+# ==========================================
+# Compiled Binaries & Build Outputs
+# ==========================================
+# Root compiled executable
+/searxng-mcp
+
+# Binaries for other OS/Architectures & generic Go executables
+*.exe
+*.exe.bin
+*.exe.img
+*.dll
+*.so
+*.dylib
+
+# Test binaries & profiles
+*.test
+*.out
+*.cover
+coverage.txt
+
+# Output directory if binaries are built into build/ or bin/
+/bin/
+/build/
+/dist/
+
+# ==========================================
+# Environment & Secret Files
+# ==========================================
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.crt
+
+# ==========================================
+# IDE & Development Tools
+# ==========================================
+# Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# JetBrains (Goland / IntelliJ)
+.idea/
+
+# ==========================================
+# OS & System Junk Files
+# ==========================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
