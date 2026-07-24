@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "searxng": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "-e", "SEARXNG_URL=http://host.docker.internal:8080",
+        "-e", "SEARXNG_TIMEOUT=10s",
+        "-e", "SEARCH_DEFAULT_LIMIT=5",
+        "-e", "FETCH_MAX_CHARS=6000",
+        "searxng-mcp:latest"
+      ],
+      "env": {}
+    }
+  }
+}
