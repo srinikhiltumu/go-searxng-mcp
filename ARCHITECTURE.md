@@ -33,7 +33,7 @@ The production stack uses a **two-container architecture** to separate the local
 | Running on host port 8080                                                                     |
 |                                                                                               |
 | • The actual metasearch engine software                                                       |
-| • Queries upstream search providers (DuckDuckGo, Bing, Mojeek, Wikipedia)                     |
+| • Queries upstream search providers (Bing, Mojeek, Wikipedia) per settings.yml                |
 | • Exposes the HTTP REST API on http://localhost:8080                                          |
 +-----------------------------------------------------------------------------------------------+
 ```

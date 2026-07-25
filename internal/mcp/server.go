@@ -1,3 +1,5 @@
+// Package mcp implements the Model Context Protocol server with three tools:
+// web_search, web_read, and health, using interface-based dependency injection.
 package mcp
 
 import (
@@ -9,24 +11,67 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	mcpserver "github.com/mark3labs/mcp-go/server"
 	"github.com/srinikhiltumu/go-searxng-mcp/internal/config"
-	"github.com/srinikhiltumu/go-searxng-mcp/internal/fetch"
-	"github.com/srinikhiltumu/go-searxng-mcp/internal/searxng"
 )
+
+// Searcher is the port for web search operations, enabling mock substitution in tests.
+type Searcher interface {
+	Search(ctx context.Context, query string, limit int, category string, language string) ([]searchResult, error)
+}
+
+// PageReader is the port for page fetching and content extraction.
+type PageReader interface {
+	ReadPage(ctx context.Context, targetURL string, maxChars int) (*readResult, error)
+}
+
+// HealthChecker is the port for backend health probing.
+type HealthChecker interface {
+	Health(ctx context.Context) *healthStatus
+}
+
+// searchResult is the DTO returned by Searcher, decoupling the MCP layer from
+// the concrete searxng.SearchResult type.
+type searchResult struct {
+	Rank    int    `json:"rank"`
+	Title   string `json:"title"`
+	URL     string `json:"url"`
+	Engine  string `json:"engine,omitempty"`
+	Snippet string `json:"snippet"`
+}
+
+// readResult is the DTO returned by PageReader.
+type readResult struct {
+	URL       string `json:"url"`
+	Title     string `json:"title"`
+	Content   string `json:"content"`
+	CharCount int    `json:"char_count"`
+	Truncated bool   `json:"truncated"`
+}
+
+// healthStatus is the DTO returned by HealthChecker.
+type healthStatus struct {
+	Status            string `json:"status"`
+	SearxngURL        string `json:"searxng_url"`
+	SearxngLatencyMs  int64  `json:"searxng_latency_ms"`
+	EnginesConfigured int    `json:"engines_configured,omitempty"`
+	Error             string `json:"error,omitempty"`
+}
 
 // Server encapsulates the MCP server setup and dependencies.
 type Server struct {
 	cfg         *config.Config
-	searxClient *searxng.Client
-	pageFetcher *fetch.Fetcher
+	searcher    Searcher
+	pageReader  PageReader
+	healthCheck HealthChecker
 	mcpServer   *mcpserver.MCPServer
 }
 
 // NewServer initializes the MCP server, tools, and handlers.
-func NewServer(cfg *config.Config, searxClient *searxng.Client, pageFetcher *fetch.Fetcher) *Server {
+func NewServer(cfg *config.Config, searcher Searcher, pageReader PageReader, healthCheck HealthChecker) *Server {
 	s := &Server{
 		cfg:         cfg,
-		searxClient: searxClient,
-		pageFetcher: pageFetcher,
+		searcher:    searcher,
+		pageReader:  pageReader,
+		healthCheck: healthCheck,
 		mcpServer: mcpserver.NewMCPServer(
 			"SearXNG Web Search",
 			"1.0.0",
@@ -43,7 +88,6 @@ func (s *Server) MCPServer() *mcpserver.MCPServer {
 }
 
 func (s *Server) registerTools() {
-	// 1. web_search tool
 	searchTool := mcp.NewTool("web_search",
 		mcp.WithDescription("Search the web via your SearXNG instance and return compact, ranked results."),
 		mcp.WithString("query",
@@ -62,7 +106,6 @@ func (s *Server) registerTools() {
 	)
 	s.mcpServer.AddTool(searchTool, s.handleWebSearch)
 
-	// 2. web_read tool
 	readTool := mcp.NewTool("web_read",
 		mcp.WithDescription("Fetch and extract readable content from a given URL."),
 		mcp.WithString("url",
@@ -75,13 +118,13 @@ func (s *Server) registerTools() {
 	)
 	s.mcpServer.AddTool(readTool, s.handleWebRead)
 
-	// 3. health tool
 	healthTool := mcp.NewTool("health",
 		mcp.WithDescription("Check MCP server and SearXNG backend status."),
 	)
 	s.mcpServer.AddTool(healthTool, s.handleHealth)
 }
 
+// handleWebSearch processes the web_search MCP tool call.
 func (s *Server) handleWebSearch(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	query, ok := getStringArg(req, "query")
 	if !ok || query == "" {
@@ -96,7 +139,7 @@ func (s *Server) handleWebSearch(ctx context.Context, req mcp.CallToolRequest) (
 	category, _ := getStringArg(req, "category")
 	language, _ := getStringArg(req, "language")
 
-	results, err := s.searxClient.Search(ctx, query, limit, category, language)
+	results, err := s.searcher.Search(ctx, query, limit, category, language)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("SearXNG search failed: %v", err)), nil
 	}
@@ -109,6 +152,7 @@ func (s *Server) handleWebSearch(ctx context.Context, req mcp.CallToolRequest) (
 	return mcp.NewToolResultText(string(data)), nil
 }
 
+// handleWebRead processes the web_read MCP tool call.
 func (s *Server) handleWebRead(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	targetURL, ok := getStringArg(req, "url")
 	if !ok || targetURL == "" {
@@ -120,7 +164,7 @@ func (s *Server) handleWebRead(ctx context.Context, req mcp.CallToolRequest) (*m
 		maxChars = maxVal
 	}
 
-	result, err := s.pageFetcher.ReadPage(ctx, targetURL, maxChars)
+	result, err := s.pageReader.ReadPage(ctx, targetURL, maxChars)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Failed to read URL: %v", err)), nil
 	}
@@ -133,8 +177,9 @@ func (s *Server) handleWebRead(ctx context.Context, req mcp.CallToolRequest) (*m
 	return mcp.NewToolResultText(string(data)), nil
 }
 
+// handleHealth processes the health MCP tool call.
 func (s *Server) handleHealth(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	status := s.searxClient.Health(ctx)
+	status := s.healthCheck.Health(ctx)
 	data, err := json.MarshalIndent(status, "", "  ")
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Failed to format health response: %v", err)), nil
@@ -143,6 +188,7 @@ func (s *Server) handleHealth(ctx context.Context, req mcp.CallToolRequest) (*mc
 	return mcp.NewToolResultText(string(data)), nil
 }
 
+// getStringArg safely extracts a string argument from an MCP request.
 func getStringArg(req mcp.CallToolRequest, name string) (string, bool) {
 	if req.Params.Arguments == nil {
 		return "", false
@@ -159,6 +205,7 @@ func getStringArg(req mcp.CallToolRequest, name string) (string, bool) {
 	return str, ok
 }
 
+// getIntArg safely extracts an integer argument from an MCP request.
 func getIntArg(req mcp.CallToolRequest, name string) (int, bool) {
 	if req.Params.Arguments == nil {
 		return 0, false
