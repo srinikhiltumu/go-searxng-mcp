@@ -44,7 +44,7 @@ func main() {
 
 	if err := mcpserver.ServeStdio(serverInstance.MCPServer()); err != nil {
 		slog.Error("mcp server stopped with error", "error", err)
-		fmt.Fprintf(os.Stderr, "MCP Server error: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "MCP Server error: %v\n", err)
 		os.Exit(1)
 	}
 	slog.Info("searxng mcp server shut down cleanly")

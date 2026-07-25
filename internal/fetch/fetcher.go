@@ -199,7 +199,7 @@ func (f *Fetcher) ReadPage(ctx context.Context, targetURL string, maxChars int) 
 	if err != nil {
 		return nil, fmt.Errorf("page fetch failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("HTTP error response %d from target site", resp.StatusCode)

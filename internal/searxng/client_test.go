@@ -47,7 +47,7 @@ func TestClient_Search(t *testing.T) {
 			t.Errorf("expected format=json, got %s", r.URL.Query().Get("format"))
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(mockResponse)
+		_ = json.NewEncoder(w).Encode(mockResponse)
 	}))
 	defer server.Close()
 
@@ -100,7 +100,7 @@ func TestClient_HealthViaConfig(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.URL.Path == "/config" {
-			w.Write([]byte(`{"engines":[
+			_, _ = w.Write([]byte(`{"engines":[
 				{"name":"duckduckgo","enabled":true},
 				{"name":"bing","enabled":false},
 				{"name":"wikipedia","enabled":true}
@@ -153,7 +153,7 @@ func TestClient_SearchRetriesOnServerError(t *testing.T) {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(rawSearxngResponse{
+		_ = json.NewEncoder(w).Encode(rawSearxngResponse{
 			Results: []rawResult{{Title: "Late Result", URL: "https://late.example", Content: "ok", Engine: "ddg"}},
 		})
 	}))
@@ -178,8 +178,8 @@ func TestClient_SearchResponseCapExceeded(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		// Write valid JSON followed by extra trailing data to overflow a tiny cap.
-		json.NewEncoder(w).Encode(rawSearxngResponse{Results: []rawResult{{Title: "x", URL: "https://x.example", Content: "y", Engine: "z"}}})
-		w.Write([]byte(strings.Repeat(" ", 4*1024)))
+		_ = json.NewEncoder(w).Encode(rawSearxngResponse{Results: []rawResult{{Title: "x", URL: "https://x.example", Content: "y", Engine: "z"}}})
+		_, _ = w.Write([]byte(strings.Repeat(" ", 4*1024)))
 	}))
 	defer server.Close()
 

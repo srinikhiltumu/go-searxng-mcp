@@ -19,13 +19,13 @@ func newTestServer(t *testing.T) (*Server, *httptest.Server) {
 	mockSearxng := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.URL.Path == "/config" {
-			w.Write([]byte(`{"engines":[
+			_, _ = w.Write([]byte(`{"engines":[
 				{"name":"bing","enabled":true},
 				{"name":"wikipedia","enabled":true}
 			]}`))
 			return
 		}
-		w.Write([]byte(`{
+		_, _ = w.Write([]byte(`{
 			"query": "golang",
 			"results": [
 				{
@@ -133,7 +133,7 @@ func TestServer_handleWebRead(t *testing.T) {
 
 	mockPage := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
-		w.Write([]byte(htmlContent))
+		_, _ = w.Write([]byte(htmlContent))
 	}))
 	t.Cleanup(mockPage.Close)
 
