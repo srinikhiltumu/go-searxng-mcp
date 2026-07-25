@@ -4,6 +4,7 @@
       "command": "docker",
       "args": [
         "run",
+        "--init",
         "--rm",
         "-i",
         "-e",

@@ -247,7 +247,7 @@ func TestReadPage_Success(t *testing.T) {
 		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(htmlBody))
+		_, _ = w.Write([]byte(htmlBody))
 	}))
 	defer srv.Close()
 

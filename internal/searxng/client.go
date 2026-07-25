@@ -192,7 +192,7 @@ func (c *Client) doSearch(ctx context.Context, searchURL string) (rawSearxngResp
 	if err != nil {
 		return raw, fmt.Errorf("%w: %v", errNetworkFailure, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode >= 500 {
 		return raw, fmt.Errorf("%w: HTTP %d", errServerError, resp.StatusCode)
@@ -256,7 +256,7 @@ func (c *Client) Health(ctx context.Context) *HealthStatus {
 		status.Error = "searxng backend unreachable"
 		return status
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		status.Status = "degraded"
