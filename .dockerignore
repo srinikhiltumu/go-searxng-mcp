@@ -1,0 +1,37 @@
+# Version control
+.git
+.gitignore
+
+# Documentation — not needed inside the image
+*.md
+ARCHITECTURE.md
+CHANGES.md
+GEMINI.md
+README.md
+go-searxng-mcp-prd.md
+
+# Prebuilt binaries / build artifacts
+searxng-mcp
+/searxng-mcp
+*.exe
+*.exe.bin
+*.test
+*.out
+*.cover
+coverage.txt
+
+# SearXNG runtime config is mounted via docker-compose, not baked into image
+searxng-config/
+
+# MCP client / editor configs
+.opencode
+opencode.json
+mcp.json
+
+# CI / IDE
+.github
+.vscode
+.idea
+
+# OS junk
+.DS_Store

@@ -1,0 +1,31 @@
+services:
+  searxng-backend:
+    # NOTE: In production, pin to a specific immutable version tag and digest,
+    # e.g. searxng/searxng:<version>@sha256:<digest>, instead of :latest.
+    image: searxng/searxng:latest
+    container_name: searxng-backend
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./searxng-config/settings.yml:/etc/searxng/settings.yml
+    environment:
+      # SearXNG reads SEARXNG_SECRET to override server.secret_key at runtime.
+      # Override SEARXNG_SECRET in your environment or a .env file.
+      - SEARXNG_SECRET=${SEARXNG_SECRET:-use-a-strong-random-secret-key-in-production}
+      - SEARXNG_BASE_URL=http://localhost:8080/
+    restart: unless-stopped
+    # Prevent the container from gaining additional privileges.
+    security_opt:
+      - no-new-privileges:true
+    # Read-only root filesystem for tamper resistance. SearXNG needs a
+    # writable /tmp, which is provided via tmpfs.
+    read_only: true
+    tmpfs:
+      - /tmp:rw,size=64m
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/config"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

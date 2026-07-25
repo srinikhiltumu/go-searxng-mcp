@@ -10,4 +10,22 @@ search:
 server:
   port: 8080
   bind_address: "0.0.0.0"
-  secret_key: "searxngsecretkeyforlocaltesting"
+  # Do NOT commit a real secret here. This value is overridden at runtime by
+  # the SEARXNG_SECRET environment variable (see docker-compose.yml).
+  secret_key: "use-a-strong-random-secret-key-in-production"
+
+engines:
+  - name: bing
+    disabled: false
+  - name: mojeek
+    disabled: false
+  - name: duckduckgo
+    disabled: true
+  - name: brave
+    disabled: true
+  - name: google cse
+    disabled: true
+  - name: startpage
+    disabled: true
+  - name: qwant
+    disabled: true

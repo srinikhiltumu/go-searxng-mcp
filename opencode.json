@@ -1,0 +1,24 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "searxng": {
+      "type": "local",
+      "command": ["go", "run", "./cmd/searxng-mcp"],
+      "enabled": true,
+      "environment": {
+        "SEARXNG_URL": "http://localhost:8080",
+        "SEARXNG_TIMEOUT": "10s",
+        "SEARCH_DEFAULT_LIMIT": "5",
+        "FETCH_MAX_CHARS": "6000",
+        "SEARCH_MAX_BYTES": "1048576",
+        "WEB_READ_CONCURRENCY": "8",
+        "MAX_SEARCH_RETRIES": "2",
+        "LOG_LEVEL": "info"
+      },
+      "timeout": 30000
+    }
+  },
+  "experimental": {
+    "mcp_timeout": 30000
+  }
+}

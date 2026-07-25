@@ -14,9 +14,9 @@ The detailed product requirements are defined in `go-searxng-mcp-prd.md` in this
 
 - Always treat the SearXNG MCP server as a **private, complementary web search tool**. Do not disable or override built‑in Google / Gemini web search (e.g. `google_search`, `url_context`, or Deep Research defaults).
 - When you need version‑specific docs or examples for Go, MCP, or SearXNG, **call the Context7 MCP server** (e.g. via `use context7`) to fetch up‑to‑date documentation rather than relying solely on training data.
-- Use Go 1.22 or later and the latest stable versions of:
-  - A Go MCP SDK (for JSON‑RPC 2.0, stdio transport, and tool registration).
-  - A SearXNG Go SDK (e.g. `github.com/morikuni/go-searxng`) for calling the `/search` JSON API.
+- Use Go 1.25.5 or later and the latest stable versions of:
+  - The `mark3labs/mcp-go` SDK (for JSON‑RPC 2.0, stdio transport, and tool registration).
+  - A custom SearXNG HTTP client (`internal/searxng/client.go`) using `net/http` + `encoding/json` for calling the `/search` and `/config` JSON API. No third-party SearXNG Go SDK is used.
 - Optimize for low CPU, low memory, and low token/context usage by:
   - Returning only 5–10 search results with short snippets.
   - Truncating page content in `web_read` by `max_chars` (default ~6000 characters).
@@ -32,21 +32,22 @@ When asked to implement or modify the MCP server:
 
 1. **Load the PRD** from `go-searxng-mcp-prd.md` and summarise the key requirements.
 2. Use **Context7 MCP** to fetch the latest documentation for:
-   - The Go MCP SDK you choose (e.g. `mcp-golang`).
-   - The SearXNG Go SDK (`go-searxng`).
-   - Any HTML parsing or markdown conversion library you plan to use.
+    - The `mark3labs/mcp-go` SDK for MCP JSON-RPC 2.0, tool registration, and stdio transport.
+    - The custom SearXNG HTTP client in `internal/searxng/client.go` (uses `net/http` + `encoding/json`, no third-party SDK).
+    - `PuerkitoBio/goquery` for HTML parsing and markdown conversion.
 3. Design or update the Go project structure to include:
    - `cmd/searxng-mcp` – main entrypoint for the MCP server.
    - `internal/mcp` – MCP server setup, tool definitions, and handlers.
    - `internal/searxng` – SearXNG client wrapper and search normalization.
    - `internal/fetch` – HTTP fetch and readable content extraction.
 4. Implement the MCP tools exactly as defined in the PRD:
-   - `web_search` – uses SearXNG SDK to call `/search` with JSON, normalises results.
+   - `web_search` – uses the custom SearXNG HTTP client to call `/search` with JSON, normalises results.
    - `web_read` – fetches and extracts readable text safely, with SSRF protection and truncation.
    - `health` – checks connectivity and basic metrics.
-5. Support two run modes for the MCP server:
+5. Support three run modes for the MCP server:
    - **Go binary mode**, launched directly via `searxng-mcp` from `mcp.json`.
    - **Docker mode**, launched via `docker run -i --rm ...` from `mcp.json`.
+   - **go run dev mode**, launched via `go run ./cmd/searxng-mcp` from `opencode.json`.
 6. Add or refine unit tests and integration tests for the SearXNG client, MCP handlers, and HTML extraction logic.
 7. Keep all code and configuration aligned with the latest official MCP, Gemini, and SearXNG documentation.
 
