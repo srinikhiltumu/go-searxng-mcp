@@ -3,8 +3,10 @@ package mcp
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -275,6 +277,168 @@ func TestGetIntArg_NilValue(t *testing.T) {
 	req.Params.Arguments = map[string]any{"foo": nil}
 	if _, ok := getIntArg(req, "foo"); ok {
 		t.Error("expected ok=false for nil value")
+	}
+}
+
+type mockSearcher struct {
+	err error
+}
+
+func (m *mockSearcher) Search(ctx context.Context, query string, limit int, category string, language string) ([]searchResult, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if m.err != nil {
+		return nil, m.err
+	}
+	return []searchResult{}, nil
+}
+
+type mockPageReader struct {
+	err error
+}
+
+func (m *mockPageReader) ReadPage(ctx context.Context, targetURL string, maxChars int) (*readResult, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if m.err != nil {
+		return nil, m.err
+	}
+	return &readResult{}, nil
+}
+
+type mockHealthChecker struct {
+	status *healthStatus
+}
+
+func (m *mockHealthChecker) Health(ctx context.Context) *healthStatus {
+	return m.status
+}
+
+func TestServer_handleWebSearch_UpstreamError(t *testing.T) {
+	cfg := &config.Config{}
+	searcher := &mockSearcher{err: errors.New("upstream search error")}
+	server := NewServer(cfg, searcher, &mockPageReader{}, &mockHealthChecker{})
+
+	req := mcp.CallToolRequest{}
+	req.Params.Name = "web_search"
+	req.Params.Arguments = map[string]any{"query": "golang"}
+
+	res, err := server.handleWebSearch(context.Background(), req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !res.IsError {
+		t.Fatal("expected error result for upstream search error")
+	}
+
+	content := res.Content[0].(mcp.TextContent).Text
+	if !strings.Contains(content, "upstream search error") {
+		t.Errorf("expected error message to contain 'upstream search error', got %q", content)
+	}
+}
+
+func TestServer_handleWebRead_UpstreamError(t *testing.T) {
+	cfg := &config.Config{}
+	reader := &mockPageReader{err: errors.New("upstream read error")}
+	server := NewServer(cfg, &mockSearcher{}, reader, &mockHealthChecker{})
+
+	req := mcp.CallToolRequest{}
+	req.Params.Name = "web_read"
+	req.Params.Arguments = map[string]any{"url": "https://example.com"}
+
+	res, err := server.handleWebRead(context.Background(), req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !res.IsError {
+		t.Fatal("expected error result for upstream read error")
+	}
+
+	content := res.Content[0].(mcp.TextContent).Text
+	if !strings.Contains(content, "upstream read error") {
+		t.Errorf("expected error message to contain 'upstream read error', got %q", content)
+	}
+}
+
+func TestServer_handleHealth_UpstreamDown(t *testing.T) {
+	cfg := &config.Config{}
+	healthChecker := &mockHealthChecker{
+		status: &healthStatus{
+			Status: "error",
+			Error:  "backend down",
+		},
+	}
+	server := NewServer(cfg, &mockSearcher{}, &mockPageReader{}, healthChecker)
+
+	req := mcp.CallToolRequest{}
+	req.Params.Name = "health"
+
+	res, err := server.handleHealth(context.Background(), req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	var status healthStatus
+	if err := json.Unmarshal([]byte(res.Content[0].(mcp.TextContent).Text), &status); err != nil {
+		t.Fatalf("failed to parse health response: %v", err)
+	}
+
+	if status.Error != "backend down" {
+		t.Errorf("expected error 'backend down', got %q", status.Error)
+	}
+}
+
+func TestServer_handleWebSearch_ContextCancelled(t *testing.T) {
+	cfg := &config.Config{}
+	searcher := &mockSearcher{}
+	server := NewServer(cfg, searcher, &mockPageReader{}, &mockHealthChecker{})
+
+	req := mcp.CallToolRequest{}
+	req.Params.Name = "web_search"
+	req.Params.Arguments = map[string]any{"query": "golang"}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // cancel immediately
+
+	res, err := server.handleWebSearch(ctx, req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !res.IsError {
+		t.Fatal("expected error result for context cancelled")
+	}
+
+	content := res.Content[0].(mcp.TextContent).Text
+	if !strings.Contains(content, "context canceled") {
+		t.Errorf("expected error message to contain 'context canceled', got %q", content)
+	}
+}
+
+func TestServer_handleWebRead_ContextCancelled(t *testing.T) {
+	cfg := &config.Config{}
+	reader := &mockPageReader{}
+	server := NewServer(cfg, &mockSearcher{}, reader, &mockHealthChecker{})
+
+	req := mcp.CallToolRequest{}
+	req.Params.Name = "web_read"
+	req.Params.Arguments = map[string]any{"url": "https://example.com"}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // cancel immediately
+
+	res, err := server.handleWebRead(ctx, req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !res.IsError {
+		t.Fatal("expected error result for context cancelled")
+	}
+
+	content := res.Content[0].(mcp.TextContent).Text
+	if !strings.Contains(content, "context canceled") {
+		t.Errorf("expected error message to contain 'context canceled', got %q", content)
 	}
 }
 

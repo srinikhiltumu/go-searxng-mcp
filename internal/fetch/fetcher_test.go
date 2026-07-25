@@ -34,10 +34,11 @@ func TestIsPrivateOrLoopbackIP(t *testing.T) {
 		{"100.127.255.254", true},  // CGNAT upper bound
 		{"100.63.255.254", false},  // just below CGNAT
 		{"100.128.0.1", false},     // just above CGNAT
-		{"198.18.0.1", true},       // benchmarking (RFC 2544) — code matches 198.18.0.0/16
-		{"198.17.0.1", false},      // just below benchmarking
-		{"198.19.0.1", false},      // outside the implemented /16 check
-		{"198.20.0.1", false},      // just above benchmarking
+		{"198.18.0.1", true},       // benchmarking (RFC 2544) — 198.18.0.0/15
+		{"198.17.0.1", false},      // just below benchmarking /15
+		{"198.19.0.1", true},       // upper half of benchmarking /15 range
+		{"198.19.255.254", true},   // upper bound of benchmarking /15 range
+		{"198.20.0.1", false},      // just above benchmarking /15
 		{"0.0.0.0", true},          // unspecified IPv4
 		{"::ffff:127.0.0.1", true}, // IPv4-mapped loopback
 		{"::ffff:8.8.4.4", false},  // IPv4-mapped public
