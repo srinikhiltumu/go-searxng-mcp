@@ -277,7 +277,7 @@ func isPrivateOrLoopbackIP(ip net.IP) bool {
 			return true
 		}
 		// 198.18.0.0/15 — benchmarking (RFC 2544)
-		if ip4[0] == 198 && ip4[1] == 18 {
+		if ip4[0] == 198 && (ip4[1] == 18 || ip4[1] == 19) {
 			return true
 		}
 	}
