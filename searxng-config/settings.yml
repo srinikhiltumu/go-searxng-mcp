@@ -3,6 +3,7 @@ use_default_settings: true
 search:
   safe_search: 0
   autocomplete: ""
+  default_lang: "en"
   formats:
     - html
     - json
@@ -14,18 +15,40 @@ server:
   # the SEARXNG_SECRET environment variable (see docker-compose.yml).
   secret_key: "use-a-strong-random-secret-key-in-production"
 
+outgoing:
+  request_timeout: 10.0
+  max_request_timeout: 15.0
+  useragent_suffix: ""
+  # Keepalive connection pool settings
+  pool_connections: 100
+  pool_maxsize: 20
+  # Retry settings
+  enable_http2: true
+
 engines:
-  - name: bing
-    disabled: false
+  # General web search engines — all enabled for maximum result coverage.
+  # Some may occasionally return CAPTCHA challenges, but having multiple
+  # engines ensures at least some will return results for any given query.
   - name: mojeek
     disabled: false
   - name: duckduckgo
-    disabled: true
+    disabled: false
   - name: brave
-    disabled: true
-  - name: google cse
-    disabled: true
+    disabled: false
   - name: startpage
-    disabled: true
+    disabled: false
   - name: qwant
+    disabled: false
+  - name: google cse
+    disabled: false
+
+  # Knowledge / reference engines
+  - name: wikipedia
+    disabled: false
+  - name: wikidata
+    disabled: false
+
+  # Bing is DISABLED because it consistently returns irrelevant/garbage results
+  # (wrong regional variant or CAPTCHA'd responses) from this environment.
+  - name: bing
     disabled: true
